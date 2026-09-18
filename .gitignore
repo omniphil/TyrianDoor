@@ -1,0 +1,8 @@
+# built or downloaded, never committed
+module/obj/
+module/tyrian.wasm
+door/*.o
+door/tyriandoor
+door/tyrian.pak
+door/saves/
+data/
