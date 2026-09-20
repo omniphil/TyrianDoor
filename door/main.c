@@ -35,7 +35,8 @@ static void title(void)
     door_write(CSI "1;33m"
                "        ===============================================\r\n"
                "              T Y R I A N   -   the full game\r\n"
-               "        ===============================================\r\n" CSI "0m\r\n");
+               "        ===============================================\r\n" CSI "0m");
+    door_write(CSI "1;34m" "                    BBS door by JSONBourne\r\n" CSI "0m" "\r\n");
 }
 
 /* The name in its own colours, the way the client writes it: TERM in magenta, inator in cyan. */
@@ -180,8 +181,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    door_write(CSI "0;37m\r\n  Starting TYRIAN. Arrows fly, Space fires, Enter changes mode; ESC for the menu.\r\n"
-               "  Quit from the title screen to come back to the BBS.\r\n" CSI "0m");
+    door_write(CSI "0;37m\r\n  Starting TYRIAN. Arrows fly, Space fires, Enter changes mode;\r\n"
+               "  ESC for the menu. Quit from the title screen to come back to the BBS.\r\n" CSI "0m");
 
     if (!trace_tyrian_open()) {
         door_write(CSI "1;33m\r\n  TYRIAN couldn't be started on your terminal.\r\n" CSI "0m");
@@ -202,6 +203,7 @@ int main(int argc, char *argv[])
 
     cls();
     door_write(CSI "1;33m\r\n  Thanks for playing TYRIAN.\r\n\r\n" CSI "0m");
+    door_write(CSI "1;34m" "  BBS door by JSONBourne\r\n\r\n" CSI "0m");
 
     /* The player has just been sent a GPL-2 program, so this is where they're told where its source is: on the way
      * in it would flash past, because the game takes over the screen a moment later. */
