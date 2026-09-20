@@ -12,10 +12,32 @@ typedef struct
     int32_t type, flags, a, b, c;
 } tyrtrace_event_t;
 
-#define TE_IN_KEY   1   /* flags bit0 pressed, bit1 extended (E0); a = set-1 scancode */
-#define TE_IN_TEXT  2   /* a = UTF-16 code unit of a typed character */
-#define TE_IN_FOCUS 5   /* flags bit0 focused */
-#define TE_IN_QUIT  6   /* the player closed the picture, or the door went away */
+#define TE_IN_KEY        1   /* flags bit0 pressed, bit1 extended (E0); a = set-1 scancode */
+#define TE_IN_TEXT       2   /* a = UTF-16 code unit of a typed character */
+#define TE_IN_FOCUS      5   /* flags bit0 focused */
+#define TE_IN_QUIT       6   /* the player closed the picture, or the door went away */
+#define TE_IN_PAD_BUTTON 11  /* flags bit0 pressed; a = button (SDL GameController order), b = pad */
+#define TE_IN_PAD_AXIS   12  /* a = axis, b = value (sticks -32768..32767, triggers 0..32767), c = pad */
+#define TE_IN_PAD_DEVICE 14  /* flags bit0 = plugged in; a = pad */
+
+/* ---- gamepads (engine contract TE_IN_PAD_*) ----
+ * Kept as state rather than queued: OpenTyrian POLLS its joystick (joystick.c, via SDL_JoystickGet*), so the
+ * records are folded into the arrays below as they arrive and the game reads whatever is current. Written on the
+ * host's input callback and read on the game thread; a torn read costs one frame of a stale axis, which is why
+ * there is no lock on a path that runs per mouse-move.
+ */
+#define TYRTRACE_MAX_PADS    4
+#define TYRTRACE_PAD_BUTTONS 15
+#define TYRTRACE_PAD_AXES    6
+
+/* How many pads to report to SDL: the highest connected index + 1, so a pad's number always matches TERMinator's
+ * (SDL would otherwise renumber them and the player's saved assignments would move with it). */
+int tyrtrace_pad_count(void);
+int tyrtrace_pad_connected(int pad);
+int tyrtrace_pad_button(int pad, int button);
+int tyrtrace_pad_axis(int pad, int axis);
+/* The d-pad as an SDL hat bitmask: the contract sends it as four buttons, which is not what Tyrian reads. */
+int tyrtrace_pad_hat(int pad);
 
 void tyrtrace_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 

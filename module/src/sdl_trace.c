@@ -587,3 +587,95 @@ int SDL_ConvertAudio(SDL_AudioCVT *cvt)
     cvt->len_cvt = out * 2;
     return 0;
 }
+
+/* ---- joysticks: TERMinator's gamepads -------------------------------------------------------------------
+ * State lives in tyrtrace.c, folded in as the TE_IN_PAD_* records arrive; everything here is a read of it.
+ * OpenTyrian polls (SDL_JoystickEventState(SDL_IGNORE) in joystick.c), so nothing is queued and
+ * SDL_JoystickUpdate has nothing to do.
+ *
+ * The index IS TERMinator's pad number. SDL would normally renumber around a gap, but then unplugging pad 0
+ * would slide pad 1 into its place and take the player's saved assignments with it, so a disconnected pad
+ * keeps its slot and simply reads as centred.
+ */
+
+struct SDL_Joystick { int index; };
+static struct SDL_Joystick g_joysticks[TYRTRACE_MAX_PADS];
+
+int SDL_NumJoysticks(void)
+{
+    /* Always at least one. OpenTyrian enumerates joysticks ONCE, in init_joysticks() at startup, so a pad plugged
+     * in later would never be seen -- and a pad that is already there only just wins the race, since TERMinator
+     * replays it as the module opens. Reporting a slot that is currently empty costs nothing: every axis, button
+     * and hat reads centred until a pad actually arrives, which is the same as having no joystick. */
+    int count = tyrtrace_pad_count();
+    return count > 0 ? count : 1;
+}
+
+SDL_Joystick *SDL_JoystickOpen(int index)
+{
+    if (index < 0 || index >= TYRTRACE_MAX_PADS)
+        return NULL;
+    g_joysticks[index].index = index;
+    return &g_joysticks[index];
+}
+
+void SDL_JoystickClose(SDL_Joystick *j)
+{
+    (void)j;   /* nothing is held open: the pad is TERMinator's, not ours */
+}
+
+const char *SDL_JoystickName(SDL_Joystick *j)
+{
+    (void)j;
+    return "TERMinator gamepad";
+}
+
+int SDL_JoystickNumAxes(SDL_Joystick *j)
+{
+    (void)j;
+    return TYRTRACE_PAD_AXES;      /* 2 sticks + 2 triggers */
+}
+
+int SDL_JoystickNumButtons(SDL_Joystick *j)
+{
+    (void)j;
+    return TYRTRACE_PAD_BUTTONS;   /* the Xbox layout, SDL GameController order */
+}
+
+int SDL_JoystickNumHats(SDL_Joystick *j)
+{
+    (void)j;
+    return 1;                      /* the d-pad, which the contract sends as four buttons */
+}
+
+Sint16 SDL_JoystickGetAxis(SDL_Joystick *j, int n)
+{
+    if (j == NULL)
+        return 0;
+    return (Sint16)tyrtrace_pad_axis(j->index, n);
+}
+
+Uint8 SDL_JoystickGetButton(SDL_Joystick *j, int n)
+{
+    if (j == NULL)
+        return 0;
+    return (Uint8)(tyrtrace_pad_button(j->index, n) ? 1 : 0);
+}
+
+Uint8 SDL_JoystickGetHat(SDL_Joystick *j, int n)
+{
+    if (j == NULL || n != 0)
+        return SDL_HAT_CENTERED;
+    return (Uint8)tyrtrace_pad_hat(j->index);
+}
+
+void SDL_JoystickUpdate(void)
+{
+    /* The state is already current: TERMinator pushes changes as they happen. */
+}
+
+int SDL_JoystickEventState(int state)
+{
+    (void)state;
+    return SDL_IGNORE;   /* polled only; we never push joystick events */
+}

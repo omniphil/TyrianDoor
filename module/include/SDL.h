@@ -263,7 +263,11 @@ typedef union SDL_Event
 int SDL_PollEvent(SDL_Event *event);
 int SDL_PushEvent(SDL_Event *event);
 
-/* ---- joysticks: none (TERMinator has no gamepad input for modules yet) ---- */
+/* ---- joysticks: TERMinator's gamepads (engine contract TE_IN_PAD_*, TRACE clients that answer pad=1) ----
+ * Polled, never event-driven: OpenTyrian's joystick.c calls SDL_JoystickEventState(SDL_IGNORE) and then reads
+ * the axes, buttons and hat every frame, so sdl_trace.c just reports the state tyrtrace.c is keeping.
+ * A pad is the Xbox layout in SDL GameController order, so Tyrian's own defaults (axes 0/1 and hat 0 to move,
+ * the first six buttons to fire) land on the left stick, the d-pad and A/B/X/Y without any configuring. */
 
 typedef struct SDL_Joystick SDL_Joystick;
 #define SDL_HAT_CENTERED 0x00
@@ -272,18 +276,18 @@ typedef struct SDL_Joystick SDL_Joystick;
 #define SDL_HAT_DOWN     0x04
 #define SDL_HAT_LEFT     0x08
 
-static inline int SDL_NumJoysticks(void) { return 0; }
-static inline SDL_Joystick *SDL_JoystickOpen(int index) { (void)index; return NULL; }
-static inline void SDL_JoystickClose(SDL_Joystick *j) { (void)j; }
-static inline const char *SDL_JoystickName(SDL_Joystick *j) { (void)j; return ""; }
-static inline int SDL_JoystickNumAxes(SDL_Joystick *j) { (void)j; return 0; }
-static inline int SDL_JoystickNumButtons(SDL_Joystick *j) { (void)j; return 0; }
-static inline int SDL_JoystickNumHats(SDL_Joystick *j) { (void)j; return 0; }
-static inline Sint16 SDL_JoystickGetAxis(SDL_Joystick *j, int n) { (void)j; (void)n; return 0; }
-static inline Uint8 SDL_JoystickGetButton(SDL_Joystick *j, int n) { (void)j; (void)n; return 0; }
-static inline Uint8 SDL_JoystickGetHat(SDL_Joystick *j, int n) { (void)j; (void)n; return 0; }
-static inline void SDL_JoystickUpdate(void) { }
-static inline int SDL_JoystickEventState(int state) { (void)state; return 0; }
+int          SDL_NumJoysticks(void);
+SDL_Joystick *SDL_JoystickOpen(int index);
+void         SDL_JoystickClose(SDL_Joystick *j);
+const char  *SDL_JoystickName(SDL_Joystick *j);
+int          SDL_JoystickNumAxes(SDL_Joystick *j);
+int          SDL_JoystickNumButtons(SDL_Joystick *j);
+int          SDL_JoystickNumHats(SDL_Joystick *j);
+Sint16       SDL_JoystickGetAxis(SDL_Joystick *j, int n);
+Uint8        SDL_JoystickGetButton(SDL_Joystick *j, int n);
+Uint8        SDL_JoystickGetHat(SDL_Joystick *j, int n);
+void         SDL_JoystickUpdate(void);
+int          SDL_JoystickEventState(int state);
 
 /* ---- audio ----
  * One device, run by the game's own thread: src/sdl_trace.c calls the game's callback whenever TERMinator's queue

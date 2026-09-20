@@ -40,6 +40,99 @@ static tyrtrace_event_t g_events[EVENT_MAX];
 static int              g_event_head, g_event_tail;
 static pthread_mutex_t  g_event_lock = PTHREAD_MUTEX_INITIALIZER;
 
+/* ---- gamepads: state, not events (see tyrtrace.h) ---- */
+static volatile int g_pad_connected[TYRTRACE_MAX_PADS];
+static volatile int g_pad_button[TYRTRACE_MAX_PADS][TYRTRACE_PAD_BUTTONS];
+static volatile int g_pad_axis[TYRTRACE_MAX_PADS][TYRTRACE_PAD_AXES];
+
+/* The contract's d-pad buttons, in SDL hat bits */
+#define PAD_DPAD_UP    11
+#define PAD_DPAD_DOWN  12
+#define PAD_DPAD_LEFT  13
+#define PAD_DPAD_RIGHT 14
+
+int tyrtrace_pad_count(void)
+{
+    int highest = 0;
+    for (int i = 0; i < TYRTRACE_MAX_PADS; i++)
+        if (g_pad_connected[i])
+            highest = i + 1;
+    return highest;
+}
+
+int tyrtrace_pad_connected(int pad)
+{
+    return (pad >= 0 && pad < TYRTRACE_MAX_PADS) ? g_pad_connected[pad] : 0;
+}
+
+int tyrtrace_pad_button(int pad, int button)
+{
+    if (pad < 0 || pad >= TYRTRACE_MAX_PADS || button < 0 || button >= TYRTRACE_PAD_BUTTONS)
+        return 0;
+    return g_pad_button[pad][button];
+}
+
+int tyrtrace_pad_axis(int pad, int axis)
+{
+    if (pad < 0 || pad >= TYRTRACE_MAX_PADS || axis < 0 || axis >= TYRTRACE_PAD_AXES)
+        return 0;
+    return g_pad_axis[pad][axis];
+}
+
+int tyrtrace_pad_hat(int pad)
+{
+    int hat = 0;   /* SDL_HAT_CENTERED */
+    if (pad < 0 || pad >= TYRTRACE_MAX_PADS)
+        return 0;
+    if (g_pad_button[pad][PAD_DPAD_UP])    hat |= 0x01;   /* SDL_HAT_UP */
+    if (g_pad_button[pad][PAD_DPAD_RIGHT]) hat |= 0x02;   /* SDL_HAT_RIGHT */
+    if (g_pad_button[pad][PAD_DPAD_DOWN])  hat |= 0x04;   /* SDL_HAT_DOWN */
+    if (g_pad_button[pad][PAD_DPAD_LEFT])  hat |= 0x08;   /* SDL_HAT_LEFT */
+    return hat;
+}
+
+/* A pad record from TERMinator. Returns 1 when it was one (and so must not be queued as a game event). */
+static int handle_pad_input(int32_t type, int32_t flags, int32_t a, int32_t b, int32_t c)
+{
+    switch (type)
+    {
+    case TE_IN_PAD_DEVICE:
+        if (a >= 0 && a < TYRTRACE_MAX_PADS)
+        {
+            g_pad_connected[a] = (flags & 1) != 0;
+            if (!(flags & 1))   /* unplugged: nothing may stay held down */
+            {
+                for (int i = 0; i < TYRTRACE_PAD_BUTTONS; i++)
+                    g_pad_button[a][i] = 0;
+                for (int i = 0; i < TYRTRACE_PAD_AXES; i++)
+                    g_pad_axis[a][i] = 0;
+            }
+            tyrtrace_log("tyrian: gamepad %d %s", (int)a, (flags & 1) ? "plugged in" : "removed");
+        }
+        return 1;
+
+    case TE_IN_PAD_BUTTON:
+        if (b >= 0 && b < TYRTRACE_MAX_PADS && a >= 0 && a < TYRTRACE_PAD_BUTTONS)
+        {
+            g_pad_button[b][a] = (flags & 1) != 0;
+            /* A pad that was never announced still counts as here, so a client that only sends the buttons works */
+            g_pad_connected[b] = 1;
+        }
+        return 1;
+
+    case TE_IN_PAD_AXIS:
+        if (c >= 0 && c < TYRTRACE_MAX_PADS && a >= 0 && a < TYRTRACE_PAD_AXES)
+        {
+            g_pad_axis[c][a] = b;
+            g_pad_connected[c] = 1;
+        }
+        return 1;
+
+    default:
+        return 0;
+    }
+}
+
 void tyrtrace_log(const char *fmt, ...)
 {
     char text[512];
@@ -302,6 +395,9 @@ void trace_on_input(int32_t type, int32_t flags, int32_t a, int32_t b, int32_t c
         trace_quit(0);
         return;
     }
+    /* Pads are polled by the game, so they are folded into state here rather than queued */
+    if (handle_pad_input(type, flags, a, b, c))
+        return;
     queue_event(&ev);
 }
 
