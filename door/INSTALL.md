@@ -43,6 +43,9 @@ The door looks for `tyrian.wasm` and `tyrian.pak` beside its own binary.
 Callers need [TERMinator](https://deadmodemsociety.com/terminator/) 1.1.2 or newer with TRACE graphics. Anyone on
 another terminal gets a screen saying so, and goes back to the BBS.
 
+A gamepad needs 1.1.3 or newer, which is when TERMinator began sending them. It is not required: the game plays
+from the keyboard as it always has, and an older client is not shut out -- it simply never sends a pad.
+
 ## Checking it works
 
 Before letting players in, run the test that impersonates TERMinator. It needs no BBS and no terminal:

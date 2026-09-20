@@ -20,7 +20,7 @@ make install      # downloads the freeware Tyrian 2.1 data and packs it into tyr
 
 Then add a door entry that runs `tyriandoor <folder holding door32.sys>`. The details, including Mystic's settings
 and where each player's saves are kept, are in [`door/INSTALL.md`](door/INSTALL.md). Callers need TERMinator 1.1.2
-or newer; anyone else is told so and sent back to the BBS.
+or newer to play, and 1.1.3 or newer for a gamepad; anyone else is told so and sent back to the BBS.
 
 `door/tyrian.wasm` is prebuilt from `module/` at the same commit, so no WebAssembly toolchain is needed to run the
 door.
